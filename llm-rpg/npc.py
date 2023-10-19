@@ -10,6 +10,7 @@ class NPC:
         self.color = color
         self.brain = Brain(self)
         NPC_REGISTRY.append(self)
+        self.hunger = 0
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, (self.x * GRID_SIZE, self.y * GRID_SIZE, GRID_SIZE, GRID_SIZE))

@@ -22,7 +22,7 @@ def main():
     # Main game loop
     # Initialize some NPCs
     npc1 = NPC(2, 2, (255, 0, 0))  # Red NPC
-    npc2 = NPC(4, 4, (0, 255, 0))  # Green NPC
+    npc2 = NPC(4, 4, (0, 0, 255))  # Blue NPC
     running = True
     while running:
         
@@ -33,10 +33,11 @@ def main():
         screen.blit(game_map.map_image, (0, 0))
 
         for npc in NPC_REGISTRY:
+            
             npc.move(game_map)
             npc.draw(screen)
         pygame.display.flip()
-        clock.tick(60)
+        clock.tick(10)
 
     pygame.quit()
 
