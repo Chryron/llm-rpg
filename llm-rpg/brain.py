@@ -18,16 +18,26 @@ class Brain:
     
     def decide_action(self, game_map, all_npcs):
         """Decide on the next action for the NPC."""
-        if random.choice([True, False]):
+        
+        action = random.choice(['converse', 'pathfind', 'buy_food'])
+
+
+        # simplify this later, converse only queues converse, LLM should choose the target self.parent_npc.queue_action(action, target_location)
+        if action == 'converse':
             target_npc = self._choose_npc_target(all_npcs)
             if target_npc:
                 print(f"NPC {COLORS[self.parent_npc.color]} is targeting NPC {COLORS[target_npc.color]}")
                 message = random.choice(['Hello', 'How are you?', 'Nice to meet you'])
-                self.parent_npc.queue_action('converse', target_npc, message=message)
+                self.parent_npc.queue_action(action, target_npc, message=message)
                 return  # Exit after queuing a converse action
-        target_location = self.choose_location(game_map)
-        if target_location:
-            self.parent_npc.queue_action('pathfind', target_location)
+        
+        elif action == 'pathfind':
+            target_location = self.choose_location(game_map)
+            if target_location:
+                self.parent_npc.queue_action(action, target_location)
+        
+        else:
+            self.parent_npc.queue_action(action)
 
  
     def _choose_conversation_partner(self, all_npcs):

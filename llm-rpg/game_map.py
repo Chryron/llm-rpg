@@ -9,7 +9,7 @@ class GameMap:
         self.image_path = image_path
         self.map_image = pygame.image.load(self.image_path)
         if init_locations:
-            self.village, self.reds_house, self.blue_house, self.shop = initialize_locations()
+            self.village, self.reds_house, self.blue_house, self.shop, self.workplace = initialize_locations()
 
     def is_wall(self, x: int, y: int) -> bool:
         # Implement this function to check if a given grid cell is a wall
@@ -146,6 +146,10 @@ def create_map_image():
     # Bottom-left room with top opening
     draw_room(draw, (0, SCREEN_HEIGHT - room_height), (room_width, SCREEN_HEIGHT), "top")
 
+    # Bottom-right room with top opening
+    draw_room(draw, (SCREEN_WIDTH - room_width, SCREEN_HEIGHT - room_height), (SCREEN_WIDTH, SCREEN_HEIGHT), "top")
+
+
     # Draw the grid
     for x in range(0, SCREEN_WIDTH, GRID_SIZE):
         draw.line([(x, 0), (x, SCREEN_HEIGHT)], fill=(200, 200, 200))
@@ -182,9 +186,17 @@ def initialize_locations():
     shop_entrance = Location("Entrance to Shop", (2, room_height_units * 2 + 1), (4, room_height_units * 2 + 3))
     shop.add_sub_location(shop_entrance)
 
+    # Workplace (Bottom-right room)
+    workplace = Location("Workplace", (room_width_units * 2 + 1, room_height_units * 2 + 1), (SCREEN_WIDTH // GRID_SIZE - 1, SCREEN_HEIGHT // GRID_SIZE - 1))
+    workplace_entrance = Location("Entrance to Workplace", (room_width_units * 3 - 4, room_height_units * 3 - 4), (room_width_units * 3 - 2, room_height_units * 3 - 2))
+    workplace.add_sub_location(workplace_entrance)
+
+    # Add Workplace to the village
+    village.add_sub_location(workplace)
+
     # Add all the main locations as sub-locations to the village
     village.add_sub_location(reds_house)
     village.add_sub_location(blue_house)
     village.add_sub_location(shop)
 
-    return village, reds_house, blue_house, shop
+    return village, reds_house, blue_house, shop, workplace

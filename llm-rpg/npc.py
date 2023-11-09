@@ -22,9 +22,69 @@ class NPC:
         self.hunger = 0
         self.action_queue: deque = deque()  # Queue for actions
         self.paused_action = None
+        
+        # statuses
+        self.hunger = 100
+        self.currency = 100
+        self.social = 100
+        self.food = 100
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, (self.x * GRID_SIZE, self.y * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+
+    def _execute_eat(self, action, game_map):
+        current_location_name = game_map.get_current_location(self.x, self.y)
+
+        # Check if the NPC is in the Shop or Entrance to Shop
+        if COLORS[self.color] in current_location_name.upper():
+            if self.food >= 0:  # Assuming it costs 10 currency to buy food
+                self.food -= 10
+                self.hunger += 10  # Assuming buying food increases the food status by 50
+                print(f"NPC {COLORS[self.color]} ate food at {current_location_name}.")
+            else:
+                print(f"NPC {COLORS[self.color]} does not have enough food to eat.")
+        else:
+            print(f"NPC {COLORS[self.color]} is not Home and cannot eat.")
+        
+        # deque
+        self.action_queue.popleft()        
+
+    def _execute_buy_food(self, action, game_map):
+        current_location_name = game_map.get_current_location(self.x, self.y)
+
+        # Check if the NPC is in the Shop or Entrance to Shop
+        if "Shop" in current_location_name:
+            if self.currency >= 10:  # Assuming it costs 10 currency to buy food
+                self.currency -= 10
+                self.food += 10  # Assuming buying food increases the food status by 50
+                print(f"NPC {COLORS[self.color]} bought food at the Shop.")
+            else:
+                print(f"NPC {COLORS[self.color]} does not have enough currency to buy food.")
+        else:
+            print(f"NPC {COLORS[self.color]} is not in the Shop and cannot buy food.")
+        
+        # deque
+        self.action_queue.popleft()
+         
+
+
+    def do_job(self, action, game_map):
+        current_location_name = game_map.get_current_location(self.x, self.y)
+
+        # Check if the NPC is in the Shop or Entrance to Shop
+        if "Workplace" in current_location_name:
+            if self.currency <= 200:  # Assuming it costs 10 currency to buy food
+                self.currency += 10
+                print(f"NPC {COLORS[self.color]} has earned some money.")
+            else:
+                print(f"NPC {COLORS[self.color]} has too much money.")
+        else:
+            print(f"NPC {COLORS[self.color]} is not in the Workplace and cannot earn money.")
+        
+        # deque
+        self.action_queue.popleft()
+
+    
 
     def _execute_pathfind(self, action, game_map):
         target = action.target
@@ -99,6 +159,7 @@ class NPC:
                     target_npc.queue_action('converse', message=random.choice(['Hello', 'How are you?', 'Nice to meet you']), target=self, end=True)  # Force target to converse
                 
                 print(f"NPC {COLORS[self.color]} says: {action.message}")
+                self.social += 25
                 self.action_queue.popleft()  # Dequeue the current action
                 # End the conversation for both NPCs
                 self.end_conversation(game_map)
@@ -113,6 +174,18 @@ class NPC:
 
     def move(self, game_map):
         # Prioritize actions in the action queue.
+        if self.hunger > 0:
+            self.hunger -= 0.1
+        else:
+            print(f"NPC {COLORS[self.color]} has died of starvation.")
+            return
+        
+        if self.social > 0:
+            self.social -= 0.1
+        else:
+            print(f"NPC {COLORS[self.color]} has died alone.")
+            return
+
         if not self.action_queue:
             self.brain.decide_action(game_map, NPC_REGISTRY)
         if len(self.action_queue) > 2:
@@ -121,10 +194,12 @@ class NPC:
             print("help")
         current_action = self.action_queue[0]  # Peek the first action
         
-        if current_action.type == 'pathfind':
-            self._execute_pathfind(current_action, game_map)
-        elif current_action.type == 'converse':
-            self._execute_converse(current_action, game_map)
+        action_function = '_execute_' + current_action.type
+        getattr(self, action_function)(current_action, game_map)
+        # if current_action.type == 'pathfind':
+        #     self._execute_pathfind(current_action, game_map)
+        # elif current_action.type == 'converse':
+        #     self._execute_converse(current_action, game_map)
     
 
     
