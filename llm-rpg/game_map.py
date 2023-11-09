@@ -14,7 +14,7 @@ class GameMap:
     def is_wall(self, x: int, y: int) -> bool:
         # Implement this function to check if a given grid cell is a wall
         # Use pygame's Surface.get_at() to check the pixel color
-        pixel_color = self.map_image.get_at((x * GRID_SIZE + GRID_SIZE // 2, y * GRID_SIZE + GRID_SIZE // 2))
+        pixel_color = self.map_image.get_at((x * GRID_SIZE + GRID_SIZE // 2, y * GRID_SIZE + GRID_SIZE // 2)) #ERROR: IndexError: pixel index out of range 
         return pixel_color == BLACK
 
     def get_current_location(self, x: int, y: int) -> str:

@@ -21,10 +21,26 @@ def a_star_pathfinding(start, target, game_map, current_npc):
     target_node = Node(target['data'][0], target['data'][1])
 
     open_list.append(start_node)
+
+
     if target['type'] == 'npc':
         npc_positions = {(npc.x, npc.y) for npc in NPC_REGISTRY if (npc.x, npc.y) != current_npc['data'] and (npc.x, npc.y) != target['data']}
     else:
         npc_positions = {(npc.x, npc.y) for npc in NPC_REGISTRY if (npc.x, npc.y) != current_npc['data']}
+
+    possible_target_positions = [target['data']]
+    # if target['type'] == 'npc':
+    #     possible_target_positions = [
+    #         (target_node.x + dx, target_node.y + dy) 
+    #         for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]
+    #         if 0 <= target_node.x + dx < SCREEN_WIDTH // GRID_SIZE and 0 <= target_node.y + dy < SCREEN_HEIGHT // GRID_SIZE
+    #         and not game_map.is_wall(target_node.x + dx, target_node.y + dy)
+    #         and (target_node.x + dx, target_node.y + dy) not in npc_positions
+    #     ]
+    # else:
+    #     possible_target_positions = [target['data']]
+    # if not possible_target_positions:
+    #     Exception("No possible target positions")
     
     while len(open_list) > 0:
         
@@ -35,13 +51,13 @@ def a_star_pathfinding(start, target, game_map, current_npc):
         # print(f"Current node: {current_node.x}, {current_node.y}. Target node: {target_node.x}, {target_node.y}. Open list: {len(open_list)}. Closed list: {len(closed_list)}")
         
         # Found the goal
-        if current_node.x == target_node.x and current_node.y == target_node.y:
+        if any([current_node.x == x and current_node.y == y for x, y in possible_target_positions]):
             path = []
             current = current_node
             while current is not None:
                 path.append((current.x, current.y))
                 current = current.parent
-            return path[::-1]  # Return reversed path
+            return path[::-1][1:]  # Return reversed path
 
         children = []
         for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:

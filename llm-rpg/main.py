@@ -31,13 +31,13 @@ def main():
                 running = False
         
         screen.blit(game_map.map_image, (0, 0))
-
+        # NPC_REGISTRY: list[NPC]
         for npc in NPC_REGISTRY:
             
             npc.move(game_map)
             npc.draw(screen)
         pygame.display.flip()
-        clock.tick(10)
+        clock.tick(60)
 
     pygame.quit()
 
