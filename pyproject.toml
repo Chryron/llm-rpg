@@ -13,6 +13,7 @@ openai = "^0.28.1"
 pathfinding = "^1.0.4"
 pygame = "^2.5.2"
 pytest = "^7.4.2"
+python-dotenv = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
