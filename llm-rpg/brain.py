@@ -1,7 +1,7 @@
 import random
 from pathfinding import a_star_pathfinding
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT, GRID_SIZE, COLORS
-
+from llm import prompt, get_context
 class Brain:
     def __init__(self, parent_npc):
         self.parent_npc = parent_npc
@@ -13,31 +13,80 @@ class Brain:
         
         self.conversation_partner = None
         self.messages = []
+        self.last_actions = []
 
-
-    
     def decide_action(self, game_map, all_npcs):
         """Decide on the next action for the NPC."""
         
-        action = random.choice(['converse', 'pathfind', 'buy_food'])
+        # action = random.choice(['converse', 'pathfind', 'buy_food', 'eat', 'do_job'])
+        # context = get_context(self.parent_npc, game_map, all_npcs)
+        action_data = prompt(self.parent_npc, game_map, all_npcs, self.last_actions)
+        action = action_data['type']
+        self.last_actions.append(action)
+        if len(self.last_actions)>3: self.last_actions.pop(0)
 
 
-        # simplify this later, converse only queues converse, LLM should choose the target self.parent_npc.queue_action(action, target_location)
         if action == 'converse':
-            target_npc = self._choose_npc_target(all_npcs)
+            target_npc_name = action_data['target']
+            target_npc = None
+            for npc in all_npcs:
+                if npc.name == target_npc_name:
+                    target_npc = npc
+                    break
+            # target_npc = self._choose_npc_target(all_npcs)
             if target_npc:
-                print(f"NPC {COLORS[self.parent_npc.color]} is targeting NPC {COLORS[target_npc.color]}")
-                message = random.choice(['Hello', 'How are you?', 'Nice to meet you'])
+                message = action_data['message']
+                # self.parent_npc.add_log(f"NPC {COLORS[self.parent_npc.color]} is targeting NPC {COLORS[target_npc.color]}")
+                # message = random.choice(['Hello', 'How are you?', 'Nice to meet you'])
                 self.parent_npc.queue_action(action, target_npc, message=message)
                 return  # Exit after queuing a converse action
         
         elif action == 'pathfind':
-            target_location = self.choose_location(game_map)
+            loc = action_data['target'].split(':')[-1]
+            target_location = game_map._find_location_by_name(loc)
             if target_location:
+                target_location = target_location.get_random_point(game_map)
                 self.parent_npc.queue_action(action, target_location)
+            else:
+                target_npc_name = action_data['target']
+                target_npc = None
+                for npc in all_npcs:
+                    if npc.name == target_npc_name:
+                        target_npc = npc
+                        break
+                if target_npc:
+                    self.parent_npc.queue_action(action, target_npc)
+                pass
         
+            # if target_location:
+            #     self.parent_npc.queue_action(action, target_location)
+        elif action == 'activity':
+            self.parent_npc.queue_action(action, message=action_data['message'])
+    
         else:
             self.parent_npc.queue_action(action)
+
+
+    # def decide_action(self, game_map, all_npcs):
+    #     action = random.choice(['converse', 'pathfind', 'buy_food', 'eat', 'do_job'])
+    #     #TODO: allow LLM to queue one function at a time to start and then multiple actions and then plans
+
+    #     # simplify this later, converse only queues converse, LLM should choose the target self.parent_npc.queue_action(action, target_location)
+    #     if action == 'converse':
+    #         target_npc = self._choose_npc_target(all_npcs)
+    #         if target_npc:
+    #             self.parent_npc.add_log(f"NPC {COLORS[self.parent_npc.color]} is targeting NPC {COLORS[target_npc.color]}")
+    #             message = random.choice(['Hello', 'How are you?', 'Nice to meet you'])
+    #             self.parent_npc.queue_action(action, target_npc, message=message)
+    #             return  # Exit after queuing a converse action
+        
+    #     elif action == 'pathfind':
+    #         target_location = self.choose_location(game_map)
+    #         if target_location:
+    #             self.parent_npc.queue_action(action, target_location)
+        
+    #     else:
+    #         self.parent_npc.queue_action(action)
 
  
     def _choose_conversation_partner(self, all_npcs):
@@ -60,7 +109,7 @@ class Brain:
             return None  # Return None if no locations are available
 
         chosen_location = random.choice(available_locations)
-        print(f"NPC {COLORS[self.parent_npc.color]} is targeting {chosen_location.name}")
+        self.parent_npc.add_log(f"NPC {COLORS[self.parent_npc.color]} is targeting {chosen_location.name}")
         return chosen_location.get_random_point(game_map)
     
     def choose_target(self, game_map, all_npcs):
@@ -68,7 +117,7 @@ class Brain:
             available_npcs = [npc for npc in all_npcs if npc != self.parent_npc]
             if available_npcs:
                 target_npc = random.choice(available_npcs)
-                print(f"NPC {COLORS[self.parent_npc.color]} is targeting NPC {COLORS[target_npc.color]}")
+                self.parent_npc.add_log(f"NPC {COLORS[self.parent_npc.color]} is targeting NPC {COLORS[target_npc.color]}")
                 self.parent_npc.queue_action('converse', target_npc)
             else:
                 self.choose_location_as_target(game_map)

@@ -4,7 +4,7 @@ from globals import NPC_REGISTRY
 from constants import GRID_SIZE, COLORS
 from collections import deque
 import random
-
+from llm import converse_message
 class Action:
     def __init__(self, action_type, target=None, message=None, end=False):
         self.type = action_type  # 'pathfind', 'converse'
@@ -19,15 +19,27 @@ class NPC:
         self.color = color
         self.brain = Brain(self)
         NPC_REGISTRY.append(self)
-        self.hunger = 0
+
         self.action_queue: deque = deque()  # Queue for actions
         self.paused_action = None
-        
+        self.name = COLORS[color] 
         # statuses
-        self.hunger = 100
+        self.hunger = 0
         self.currency = 100
         self.social = 100
         self.food = 100
+        self.current_conversation = []
+        self.reasoning_history = []
+
+        self.logs = []
+
+    def clear_logs(self):
+        self.logs = []
+
+    def add_log(self, message):
+        print(message)
+        self.logs.append(message)
+
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, (self.x * GRID_SIZE, self.y * GRID_SIZE, GRID_SIZE, GRID_SIZE))
@@ -39,16 +51,16 @@ class NPC:
         if COLORS[self.color] in current_location_name.upper():
             if self.food >= 0:  # Assuming it costs 10 currency to buy food
                 self.food -= 10
-                self.hunger += 10  # Assuming buying food increases the food status by 50
-                print(f"NPC {COLORS[self.color]} ate food at {current_location_name}.")
+                self.hunger -= 10  # Assuming buying food increases the food status by 50
+                self.add_log(f"NPC {COLORS[self.color]} ate food at {current_location_name}.")
             else:
-                print(f"NPC {COLORS[self.color]} does not have enough food to eat.")
+                self.add_log(f"NPC {COLORS[self.color]} does not have enough food to eat.")
         else:
-            print(f"NPC {COLORS[self.color]} is not Home and cannot eat.")
+            self.add_log(f"NPC {COLORS[self.color]} is not Home and cannot eat.")
         
         # deque
         self.action_queue.popleft()        
-
+    
     def _execute_buy_food(self, action, game_map):
         current_location_name = game_map.get_current_location(self.x, self.y)
 
@@ -57,33 +69,38 @@ class NPC:
             if self.currency >= 10:  # Assuming it costs 10 currency to buy food
                 self.currency -= 10
                 self.food += 10  # Assuming buying food increases the food status by 50
-                print(f"NPC {COLORS[self.color]} bought food at the Shop.")
+                self.add_log(f"NPC {COLORS[self.color]} bought food at the Shop.")
             else:
-                print(f"NPC {COLORS[self.color]} does not have enough currency to buy food.")
+                self.add_log(f"NPC {COLORS[self.color]} does not have enough currency to buy food.")
         else:
-            print(f"NPC {COLORS[self.color]} is not in the Shop and cannot buy food.")
+            self.add_log(f"NPC {COLORS[self.color]} is not in the Shop and cannot buy food.")
         
         # deque
         self.action_queue.popleft()
          
 
 
-    def do_job(self, action, game_map):
+    def _execute_do_job(self, action, game_map):
         current_location_name = game_map.get_current_location(self.x, self.y)
 
         # Check if the NPC is in the Shop or Entrance to Shop
         if "Workplace" in current_location_name:
             if self.currency <= 200:  # Assuming it costs 10 currency to buy food
                 self.currency += 10
-                print(f"NPC {COLORS[self.color]} has earned some money.")
+                self.add_log(f"NPC {COLORS[self.color]} has earned some money.")
             else:
-                print(f"NPC {COLORS[self.color]} has too much money.")
+                self.add_log(f"NPC {COLORS[self.color]} has too much money.")
         else:
-            print(f"NPC {COLORS[self.color]} is not in the Workplace and cannot earn money.")
+            self.add_log(f"NPC {COLORS[self.color]} is not in the Workplace and cannot earn money.")
         
         # deque
         self.action_queue.popleft()
-
+    def _execute_activity(self, action, game_map):
+        
+        self.add_log(f"NPC {COLORS[self.color]} performed the activity: {action.message}.")
+            
+        # deque
+        self.action_queue.popleft()
     
 
     def _execute_pathfind(self, action, game_map):
@@ -132,14 +149,10 @@ class NPC:
     def queue_action(self, action_type, target=None, message=None, end=False):
         """Queue an action for the NPC."""
         action = Action(action_type, target=target, message=message, end=end)
-        if self.action_queue:
-            print("jelp")
         self.action_queue.append(action)
 
     def resume_previous_action(self):
         if self.paused_action:
-            if self.action_queue:
-                print('help')
             self.action_queue.append(self.paused_action)
             self.paused_action = None
     def _execute_converse(self, action, game_map):
@@ -148,17 +161,28 @@ class NPC:
             target_distance = abs(self.x - target_npc.x) + abs(self.y - target_npc.y)
             if target_distance > 1:
                 # Save the converse action temporarily
-                self.paused_action = self.action_queue.popleft()
+                # self.paused_action = self.action_queue.popleft()
                 # If they are not adjacent, pathfind to the target
-                self.queue_action('pathfind', target=target_npc)
+                # self.queue_action('pathfind', target=target_npc)
+                
+                self.add_log(f"{target_npc.name} is too far away to talk to!")
+                self.action_queue.popleft()  # Dequeue the current action
                 return
             else:
                 if not self.action_queue[0].end:
                     if not target_npc.paused_action and target_npc.action_queue:
                         target_npc.paused_action = target_npc.action_queue.popleft()  # Pause target's current action
-                    target_npc.queue_action('converse', message=random.choice(['Hello', 'How are you?', 'Nice to meet you']), target=self, end=True)  # Force target to converse
+                    
+                    self.current_conversation.append(self.name +": "+ action.message)
+                    target_npc.current_conversation.append(self.name +": "+ action.message)
+                    response, end = converse_message(target_npc, game_map, NPC_REGISTRY, target_npc.brain.last_actions)
+                    
+                    self.current_conversation.append(target_npc.name +": "+ response)
+                    target_npc.current_conversation.append(target_npc.name +": "+ response)
+                    # target_npc.queue_action('converse', message=random.choice(['Hello', 'How are you?', 'Nice to meet you']), target=self, end=True)  # Force target to converse
+                    target_npc.queue_action('converse', message=response, target=self, end=end)  # Force target to converse
                 
-                print(f"NPC {COLORS[self.color]} says: {action.message}")
+                self.add_log(f"NPC {COLORS[self.color]} says: {action.message}")
                 self.social += 25
                 self.action_queue.popleft()  # Dequeue the current action
                 # End the conversation for both NPCs
@@ -166,6 +190,7 @@ class NPC:
                 # target_npc.end_conversation(game_map)
 
     def end_conversation(self, game_map):
+        self.current_conversation = []
         if self.paused_action:
             self.resume_previous_action()
         else:
@@ -174,24 +199,21 @@ class NPC:
 
     def move(self, game_map):
         # Prioritize actions in the action queue.
-        if self.hunger > 0:
-            self.hunger -= 0.1
+        if self.hunger < 100:
+            self.hunger += 1
         else:
-            print(f"NPC {COLORS[self.color]} has died of starvation.")
+            self.add_log(f"NPC {COLORS[self.color]} has died of starvation.")
             return
         
         if self.social > 0:
             self.social -= 0.1
         else:
-            print(f"NPC {COLORS[self.color]} has died alone.")
+            self.add_log(f"NPC {COLORS[self.color]} has died alone.")
             return
 
         if not self.action_queue:
             self.brain.decide_action(game_map, NPC_REGISTRY)
-        if len(self.action_queue) > 2:
-            print("help")
-        elif len(self.action_queue) > 1:
-            print("help")
+
         current_action = self.action_queue[0]  # Peek the first action
         
         action_function = '_execute_' + current_action.type

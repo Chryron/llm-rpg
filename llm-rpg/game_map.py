@@ -73,6 +73,15 @@ class Location:
 
         return self.name
     
+    def full_name(self):
+        p = self.parent
+        name = self.name
+        while p:
+            name = p.name+":"+name
+            p = p.parent
+            pass
+        return name
+    
     def get_available_locations(self) -> List['Location']:
         """Retrieve available locations the NPC can move to from the current position."""
         available = []
